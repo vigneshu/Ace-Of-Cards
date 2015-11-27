@@ -33,25 +33,52 @@ public class main extends JPanel {
 		System.out.println(cards.toString());
 		for (int i = 0; i < playerCount; i++) {
 			Player player = new Player(i,playerCount);
-			player.hand = cards.getDeck().subList(i * perPlayer, (i * perPlayer + perPlayer));
+			player.state.hand = cards.getDeck().subList(i * perPlayer, (i * perPlayer + perPlayer));
 			// jp1.getContentPane().add(BorderLayout.CENTER, player);
 			player.setPlayerNumber(i);
 			players[i] = player;
 
 		}
-		while(true)//Until game ends
+		Boolean gameEnd = false;
+		while(!gameEnd)//Until game ends
 		{
 			LinkedHashMap<Player,Card> cardOnBoard = new LinkedHashMap<Player,Card>();
+			Suit prevSuit = null;
+			State[] state = new State[playerCount];
+			Card[] actions = new Card[playerCount];
+			Double[] reward = new Double[playerCount];
 			for(int i =0;i<players.length;i++)// Until round ends
 			{
 				Player player = players[i];
-				Card c1 = player.playTurn(cardOnBoard);
+				state[i] = new State();
+				player.state.cardsOnBoard = (LinkedHashMap<Player,Card>)cardOnBoard.clone();
+				state[i] = player.state;
+				Card c1 = player.playTurn();//TODO write playTurn
+				Suit suit = c1.getSuit();
+				actions[i] = new Card(c1.getRank(),suit);
 				cardOnBoard.put(player,c1);
 				
 				
+				if(player.state.hand.size() == 0)
+				{
+					gameEnd = true;
+				}
+				if(prevSuit != null)
+				{
+					if(!suit.equals(prevSuit))
+					{
+						break;
+					}
+				}
+				
+				
 			}
-			decideCards(cardOnBoard);
-			break;
+			
+			reward = decideCards(cardOnBoard);
+			for(int i =0;i<players.length;i++)// Until round ends
+			{
+				players[i].updateWeights(state[i],actions[i],players[i].state,reward[i]);//TODO update reward[i]
+			}
 		}
 		
 		jp1.add(new main());
@@ -61,36 +88,41 @@ public class main extends JPanel {
 		// Graphics g = getGraphics();
 		// Card.drawCard(g, new Card(Card.Rank.ACE,Card.Suit.CLUBS), 50, 50);
 	}
-	public static void decideCards(LinkedHashMap<Player,Card> cardOnBoard)
+	public static Double[] decideCards(LinkedHashMap<Player,Card> cardOnBoard)
 	{
 		List<Card> cardsPlayed = (List<Card>)cardOnBoard.values();
 		boolean sameSuit = PackOfCards.sameSuit(cardsPlayed);
+		Double[] reward = new Double[playerCount];
 		if(sameSuit)
 		{
 			for (int i = 0;i< players.length;i++)
 			{
-				players[i].passedCards = cardsPlayed;
+				players[i].state.passedCards.addAll(cardsPlayed);
+				reward[i] = 10.0;
 			}
 		}
 		else
 		{
-			Suit s = cardOnBoard.get(0).getSuit();
+			Suit s = cardsPlayed.get(0).getSuit();
 			Integer playerNumber = PackOfCards.getPlayerWithHighCard(cardOnBoard,s);
-			players[playerNumber].hand.addAll(cardsPlayed); 
+			players[playerNumber].state.hand.addAll(cardsPlayed); 
 			for (Integer i = 0;i< players.length;i++)
 			{
 				if(playerNumber.equals(i))
 				{
+					reward[i] = -10.0;
 					continue;
 				}
-				HashMap<Integer,List<Card>> otherCards = players[i].otherPlayerCards;
+				HashMap<Integer,List<Card>> otherCards = players[i].state.otherPlayerCards;
 				if(otherCards.containsKey(i))
 				{
 					List<Card> cards = otherCards.get(i);
 					cards.addAll(playerNumber, cardsPlayed);
+					reward[i] = 15.0;
 				}
 			}	
 		}
+		return reward;
 	}
 
 	public void paint(Graphics g) {
@@ -99,7 +131,7 @@ public class main extends JPanel {
 		for (Integer i = 0;i< players.length;i++) {
 
 			Player player = players[i];
-			List<Card> hand = player.hand;
+			List<Card> hand = player.state.hand;
 			int playerNumber = player.getPlayerNumber();
 			// The paint method shows the message at the bottom of the
 			// canvas, and it draws all of the dealt cards spread out
