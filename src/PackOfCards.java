@@ -1,10 +1,10 @@
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 
 public class PackOfCards {
 	
-	public static Boolean sameSuit(List<Card> cardOnBoard) {
+	public static Boolean sameSuit(Collection<Card> cardOnBoard) {
 		Iterator<Card> it = cardOnBoard.iterator();
 		Card card = it.next();
 		Suit prevSuit = card.getSuit();
@@ -22,7 +22,7 @@ public class PackOfCards {
 	}
 	public static Integer getPlayerWithHighCard(LinkedHashMap<Player,Card> cardOnBoard,Suit s) {
 		Iterator<Player> it = cardOnBoard.keySet().iterator();
-		Rank maxRank = Rank.TWO;
+		Rank maxRank = Rank.NONE;
 		Player maxPlayer = null;
 		while(it.hasNext())
 		{

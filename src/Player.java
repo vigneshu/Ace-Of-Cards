@@ -1,12 +1,13 @@
 import java.applet.Applet;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-public class Player extends Applet {
-	public State state = new State();
+public class Player{
+	public State state;
 	double discount = 0.05;//TODO change discount alpha and value
 	double alpha = 0.05;
 	private int playerNumber;
@@ -14,18 +15,19 @@ public class Player extends Applet {
 	public static Features  stateFeatures = new Features();
 	
 	Player(int pno) {
+		this.state = new State();
 		this.playerNumber = pno;
-		System.out.println("this.playerNumber "+this.playerNumber);
 	}
 	
 	Player(int pno,int playerCount) {
+		this.state = new State();
 		this.playerNumber = pno;
 		this.playerCount = playerCount;
 		for(int i=0;i<playerCount;i++)
 		{
 			if(i != playerNumber)
 			{
-				this.state.otherPlayerCards.put(i, null);
+				this.state.otherPlayerCards.put(i, new ArrayList<Card>());
 			}
 		}
 	}
@@ -39,16 +41,18 @@ public class Player extends Applet {
 	}
 	public Card playTurn()
 	{
-		return null;
+		HashMap<Card,Double> actionAndValue = getFutureQValue(state);
+		Card maxAction =  actionAndValue.keySet().iterator().next();
+		boolean removed = this.state.removeCardInHand(maxAction);
+		return maxAction;
 	}	
-	
-	public List<Card> getSuitCards(List<Card> cardsPlayed,Suit s)
+	public List<Card> remove(Suit s)
 	{
 		List<Card> filteredCards = new ArrayList<Card>();
-		Iterator<Card> cardIterator = cardsPlayed.iterator();
+		Iterator<Card> cardIterator = this.state.hand.iterator();
 		while(cardIterator.hasNext())
 		{
-			Card c = cardIterator.next();
+			Card c =  cardIterator.next();
 			if(c.getSuit() == s)
 			{
 				 filteredCards.add(c);
@@ -57,17 +61,42 @@ public class Player extends Applet {
 		}
 		return filteredCards;
 	}
-	public List<Card> getLegalCards(State s)
+	public List<Card> getSuitCards(Suit s)
 	{
-		List<Card> cardsPlayed = (List<Card>) s.cardsOnBoard.values();
-		List<Card> suitCards = getSuitCards(cardsPlayed,s.cardsOnBoard.get(0).getSuit());
-		if(suitCards.size() == 0)
+		List<Card> filteredCards = new ArrayList<Card>();
+		Iterator<Card> cardIterator = this.state.hand.iterator();
+		while(cardIterator.hasNext())
+		{
+			Card c =  cardIterator.next();
+			if(c.getSuit() == s)
+			{
+				 filteredCards.add(c);
+			}
+			
+		}
+		return filteredCards;
+	}
+	public List<Card> getLegalActions(State s)
+	{
+		Collection<Card> cardsPlayed =  s.cardsOnBoard.values();
+		if(cardsPlayed.size() == 0)
 		{
 			return this.state.hand;
 		}
 		else
 		{
-			return suitCards;
+			
+			Player p1 = s.cardsOnBoard.keySet().iterator().next();
+			Card c1 = s.cardsOnBoard.get(p1);
+			List<Card> suitCards = getSuitCards(c1.getSuit());
+			if(suitCards.size() == 0)
+			{
+				return this.state.hand;
+			}
+			else
+			{
+				return suitCards;
+			}
 		}
 	}
 
@@ -75,7 +104,7 @@ public class Player extends Applet {
 	public Double getQValue(State s,Card action)
 	{
 		Double sum = 0.0;
-		HashMap<String,Double> features = stateFeatures.getFeatures(this,action);
+		HashMap<String,Double> features = stateFeatures.getFeatures(action);
 		HashMap<String,Double> weights = stateFeatures.getWeights();
 		Iterator<String> featureIterator = features.keySet().iterator();
 		while(featureIterator.hasNext())
@@ -85,29 +114,45 @@ public class Player extends Applet {
 		}
 		return sum;
 	}	
-	public Double getFutureQValue(State s)
+	public HashMap<Card,Double> getFutureQValue(State s)
 	{
-		List<Card> legalCards = getLegalCards(s);
+		HashMap<Card,Double> actionAndValue = new HashMap<Card,Double>();
+		Card action = new Card();;
+		List<Card> legalCards = getLegalActions(s);
 		if(legalCards.size() == 0) // Not required?
-			return 0.0;
+		{
+			actionAndValue.put(new Card(Rank.NONE,Suit.NONE),0.0);
+			return actionAndValue;
+		}
 		Double max = Double.NEGATIVE_INFINITY;
 		Iterator<Card> legalCardIterator = legalCards.iterator();
 		while(legalCardIterator.hasNext())
 		{
-			Card actionCard = legalCardIterator.next();
+			 Card actionCard = legalCardIterator.next();
 			Double qVal = getQValue(s,actionCard);
 			if(qVal>max)
 			{
 				max = qVal;
+				action.setRank(actionCard.getRank()); 
+				action.setSuit(actionCard.getSuit());
+				
 			}
 		}
-		return max;
+		actionAndValue.put(action,max);
+		return actionAndValue;
 		
 	}
+
 	public void updateWeights(State prevState ,Card action,State  state, double reward)
 	{
-		Double diff = ((reward + this.discount * getFutureQValue(state)) - getQValue(state,action));
-		HashMap<String,Double> features = stateFeatures.getFeatures(this,action);
+		HashMap<Card,Double> actionAndValue = getFutureQValue(state);
+//		System.out.println("state "+state);
+//		System.out.println("prevState "+prevState);
+//		System.out.println("actionAndValue "+actionAndValue);
+		Card maxAction =  actionAndValue.keySet().iterator().next();
+		Double maxVal = actionAndValue.get(maxAction);
+		Double diff = ((reward + this.discount * maxVal) - getQValue(state,action));
+		HashMap<String,Double> features = stateFeatures.getFeatures(action);
 		HashMap<String,Double> weights = stateFeatures.getWeights();
 		Iterator<String> featureIterator = features.keySet().iterator();
 		while(featureIterator.hasNext())
@@ -118,5 +163,10 @@ public class Player extends Applet {
 		}
 		stateFeatures.setWeights(weights);
 		}
+	
+	public String toString()
+	{
+		return Integer.toString(this.playerNumber);
+	}
 	 
 }

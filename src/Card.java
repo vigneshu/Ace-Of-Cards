@@ -1,8 +1,4 @@
-import java.applet.Applet;
-import java.util.Iterator;
-import java.util.List;
-
-public class Card extends Applet{
+public class Card {
 
 	private Rank rank;
 	private Suit suit;
@@ -10,6 +6,9 @@ public class Card extends Applet{
 	Card(Rank r, Suit s) {
 		this.rank = r;
 		this.suit = s;
+	}
+	Card() {
+		
 	}
 
 	public Rank getRank() {
@@ -19,6 +18,24 @@ public class Card extends Applet{
 	public Suit getSuit() {
 		return this.suit;
 	}
+
+	public void setRank(Rank r) {
+		this.rank = r;
+	}
+
+	public void setSuit(Suit s) {
+		this.suit = s;
+	}
+	
+	public String toString(){
+		return (Integer.toString(rank.getValue()) + this.suit.getValue()  );
+		
+	}
+	public Boolean equals(Card c2){
+		return (c2.getRank() == this.rank && c2.getSuit() == this.suit );
+		
+	}
+
 	
 	
 	

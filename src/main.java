@@ -3,6 +3,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -22,26 +23,27 @@ public class main extends JPanel {
 	static Deck cards = new Deck();
 	static JFrame jp1 = new JFrame();
 	List<Card> cardsPassed = new ArrayList<Card>();
-	
+	static Boolean gameEnd = false;
 
     
 	
 	
 	public static void main(String[] args) {
-		System.out.println("Hey");
 		int perPlayer = 52 / playerCount;
-		System.out.println(cards.toString());
 		for (int i = 0; i < playerCount; i++) {
 			Player player = new Player(i,playerCount);
-			player.state.hand = cards.getDeck().subList(i * perPlayer, (i * perPlayer + perPlayer));
+			player.state.hand = new ArrayList<Card>(cards.getDeck().subList(i * perPlayer, (i * perPlayer + perPlayer)));
 			// jp1.getContentPane().add(BorderLayout.CENTER, player);
 			player.setPlayerNumber(i);
 			players[i] = player;
-
+			
 		}
-		Boolean gameEnd = false;
+		
+		int round = 1;
 		while(!gameEnd)//Until game ends
 		{
+			System.out.println("round "+round);
+			round++;
 			LinkedHashMap<Player,Card> cardOnBoard = new LinkedHashMap<Player,Card>();
 			Suit prevSuit = null;
 			State[] state = new State[playerCount];
@@ -49,35 +51,46 @@ public class main extends JPanel {
 			Double[] reward = new Double[playerCount];
 			for(int i =0;i<players.length;i++)// Until round ends
 			{
-				Player player = players[i];
-				state[i] = new State();
-				player.state.cardsOnBoard = (LinkedHashMap<Player,Card>)cardOnBoard.clone();
-				state[i] = player.state;
-				Card c1 = player.playTurn();//TODO write playTurn
+				players[i].state.cardsOnBoard = new LinkedHashMap<Player,Card>(cardOnBoard);
+				state[i] = new State(players[i].state);
+				
+//				System.out.println("State before play "+players[i].state.toString());
+				Card c1 = players[i].playTurn();//TODO write playTurn
 				Suit suit = c1.getSuit();
+				System.out.println("Player " +i+" Card Played: " +c1);
 				actions[i] = new Card(c1.getRank(),suit);
-				cardOnBoard.put(player,c1);
+				cardOnBoard.put(players[i],c1);
+				players[i].state.cardsOnBoard = new LinkedHashMap<Player,Card>(cardOnBoard);
 				
 				
-				if(player.state.hand.size() == 0)
-				{
-					gameEnd = true;
-				}
 				if(prevSuit != null)
 				{
-					if(!suit.equals(prevSuit))
+					if(suit!= prevSuit)
 					{
+						System.out.println("Card cut  by player "+ i+ "Going tonext round.Played card "+c1.toString());
 						break;
 					}
 				}
-				
+				prevSuit = suit;
 				
 			}
-			
-			reward = decideCards(cardOnBoard);
-			for(int i =0;i<players.length;i++)// Until round ends
+			if(!gameEnd)
 			{
-				players[i].updateWeights(state[i],actions[i],players[i].state,reward[i]);//TODO update reward[i]
+				reward = decideCards(cardOnBoard);
+				for(int i =0;i<cardOnBoard.size();i++)//Update weights for every playerplayed
+				{
+//					System.out.println("PlayerNumber : "+i+" ");
+//					System.out.println("prev State "+state[i].toString()+" ");
+//					System.out.println("prev actions "+actions[i].toString()+" ");
+//					System.out.println("next state "+players[i].state.toString()+" ");
+//					System.out.println("reward[i] "+reward[i]+"\n");
+					players[i].updateWeights(state[i],actions[i],players[i].state,reward[i]);//TODO update reward[i]
+	//				System.out.println("\n");
+				}
+			}
+			if(gameEnd)
+			{
+				System.out.println("Weights after calculation "+players[0].stateFeatures.getWeights());
 			}
 		}
 		
@@ -90,7 +103,7 @@ public class main extends JPanel {
 	}
 	public static Double[] decideCards(LinkedHashMap<Player,Card> cardOnBoard)
 	{
-		List<Card> cardsPlayed = (List<Card>)cardOnBoard.values();
+		Collection<Card> cardsPlayed = cardOnBoard.values();
 		boolean sameSuit = PackOfCards.sameSuit(cardsPlayed);
 		Double[] reward = new Double[playerCount];
 		if(sameSuit)
@@ -99,30 +112,68 @@ public class main extends JPanel {
 			{
 				players[i].state.passedCards.addAll(cardsPlayed);
 				reward[i] = 10.0;
+				if(players[i].state.hand.size() == 0)
+				{
+					gameEnd = true;
+				}
 			}
 		}
 		else
 		{
-			Suit s = cardsPlayed.get(0).getSuit();
+			Suit s = cardsPlayed.iterator().next().getSuit();
 			Integer playerNumber = PackOfCards.getPlayerWithHighCard(cardOnBoard,s);
 			players[playerNumber].state.hand.addAll(cardsPlayed); 
 			for (Integer i = 0;i< players.length;i++)
 			{
-				if(playerNumber.equals(i))
+//				HashMap<Integer,List<Card>> otherCards = players[i].state.otherPlayerCards;
+//				if(otherCards.containsKey(i))
+//				{
+//					List<Card> cards = otherCards.get(i);
+//					cards.addAll(playerNumber, cardsPlayed);
+//					reward[i] = 15.0;
+//				}
+				if(!playerNumber.equals(i))
 				{
-					reward[i] = -10.0;
-					continue;
-				}
-				HashMap<Integer,List<Card>> otherCards = players[i].state.otherPlayerCards;
-				if(otherCards.containsKey(i))
-				{
-					List<Card> cards = otherCards.get(i);
-					cards.addAll(playerNumber, cardsPlayed);
-					reward[i] = 15.0;
+					HashMap<Integer,List<Card>> otherCards = players[i].state.otherPlayerCards;
+					List<Card> cards = otherCards.get(playerNumber);
+					cards.addAll( cardsPlayed);
+					if(players[i].state.hand.size() == 0)
+					{
+						gameEnd = true;
+					}
 				}
 			}	
+			Iterator<Player> playerIt = cardOnBoard.keySet().iterator();
+			int i = 0;
+			while(playerIt.hasNext())
+			{
+				Player p = playerIt.next();
+				if(playerNumber.equals(p.getPlayerNumber()))
+				{
+					reward[i] = -10.0;
+				}
+				else
+				{
+					reward[i] = 15.0;
+				}
+				i++;
+			}
 		}
 		return reward;
+	}
+	public void printPlayers(Player[] p)
+	{
+		for(int i = 0;i<p.length;i++)
+		{
+			System.out.println(p.toString()+ " ");
+		}
+	}
+	public void printCards(Card[] c)
+	{
+		for(int i = 0;i<c.length;i++)
+		{
+			System.out.println(c.toString()+ " ");
+		}
 	}
 
 	public void paint(Graphics g) {

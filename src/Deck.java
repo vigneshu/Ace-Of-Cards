@@ -11,7 +11,10 @@ public class Deck {
 		{
 			for(Suit s : Suit.values())
 				{
-					deck.add(new Card(r,s));
+					if(r!=Rank.NONE && s!=Suit.NONE)
+					{
+						deck.add(new Card(r,s));
+					}
 				}
 		}
 		Collections.shuffle( deck );
