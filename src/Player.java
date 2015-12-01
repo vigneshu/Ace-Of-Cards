@@ -1,33 +1,40 @@
-import java.applet.Applet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Random;
 
 public class Player{
 	public State state;
 	double discount = 0.05;//TODO change discount alpha and value
 	double alpha = 0.05;
 	private int playerNumber;
-	private int playerCount;
+	static private int playerCount;
 	public static Features  stateFeatures = new Features();
 	
-	Player(int pno) {
-		this.state = new State();
-		this.playerNumber = pno;
+
+	
+	Player(Player p) {
+		this.state = new State(p.state);
+		this.playerNumber = p.playerNumber;
+		this.discount = p.discount;
+		this.alpha = p.alpha;
+		Player.stateFeatures = new Features(stateFeatures);
+		
 	}
 	
 	Player(int pno,int playerCount) {
 		this.state = new State();
+		this.state.playerNumber = pno;
 		this.playerNumber = pno;
-		this.playerCount = playerCount;
+		Player.playerCount = playerCount;
 		for(int i=0;i<playerCount;i++)
 		{
 			if(i != playerNumber)
 			{
 				this.state.otherPlayerCards.put(i, new ArrayList<Card>());
+				this.state.otherPlayerEmptySuits.put(i, new ArrayList<Suit>());
 			}
 		}
 	}
@@ -39,9 +46,9 @@ public class Player{
 	{
 		return this.playerNumber = playernumber;
 	}
-	public Card playTurn()
+	public Card playTurn(Boolean training)
 	{
-		HashMap<Card,Double> actionAndValue = getFutureQValue(state);
+		HashMap<Card,Double> actionAndValue = getFutureQValue(state,training);
 		Card maxAction =  actionAndValue.keySet().iterator().next();
 		boolean removed = this.state.removeCardInHand(maxAction);
 		return maxAction;
@@ -104,7 +111,7 @@ public class Player{
 	public Double getQValue(State s,Card action)
 	{
 		Double sum = 0.0;
-		HashMap<String,Double> features = stateFeatures.getFeatures(action);
+		HashMap<String,Double> features = stateFeatures.getFeatures(state,action);
 		HashMap<String,Double> weights = stateFeatures.getWeights();
 		Iterator<String> featureIterator = features.keySet().iterator();
 		while(featureIterator.hasNext())
@@ -116,6 +123,10 @@ public class Player{
 	}	
 	public HashMap<Card,Double> getFutureQValue(State s)
 	{
+		return getFutureQValue( s, false);
+	}
+	public HashMap<Card,Double> getFutureQValue(State s,Boolean training)
+	{
 		HashMap<Card,Double> actionAndValue = new HashMap<Card,Double>();
 		Card action = new Card();;
 		List<Card> legalCards = getLegalActions(s);
@@ -125,17 +136,27 @@ public class Player{
 			return actionAndValue;
 		}
 		Double max = Double.NEGATIVE_INFINITY;
-		Iterator<Card> legalCardIterator = legalCards.iterator();
-		while(legalCardIterator.hasNext())
+		Random randomGenerator = new Random();;
+		
+		if(training && Math.random()<0.5)
 		{
-			 Card actionCard = legalCardIterator.next();
-			Double qVal = getQValue(s,actionCard);
-			if(qVal>max)
+			 int index = randomGenerator.nextInt(legalCards.size());
+			 action = legalCards.get(index);
+		}
+		else
+		{
+			Iterator<Card> legalCardIterator = legalCards.iterator();
+			while(legalCardIterator.hasNext())
 			{
-				max = qVal;
-				action.setRank(actionCard.getRank()); 
-				action.setSuit(actionCard.getSuit());
-				
+				 Card actionCard = legalCardIterator.next();
+				Double qVal = getQValue(s,actionCard);
+				if(qVal>max)
+				{
+					max = qVal;
+					action.setRank(actionCard.getRank()); 
+					action.setSuit(actionCard.getSuit());
+					
+				}
 			}
 		}
 		actionAndValue.put(action,max);
@@ -145,14 +166,11 @@ public class Player{
 
 	public void updateWeights(State prevState ,Card action,State  state, double reward)
 	{
-		HashMap<Card,Double> actionAndValue = getFutureQValue(state);
-//		System.out.println("state "+state);
-//		System.out.println("prevState "+prevState);
-//		System.out.println("actionAndValue "+actionAndValue);
+		HashMap<Card,Double> actionAndValue = getFutureQValue(state,false);//should be false for update weights even during training
 		Card maxAction =  actionAndValue.keySet().iterator().next();
 		Double maxVal = actionAndValue.get(maxAction);
 		Double diff = ((reward + this.discount * maxVal) - getQValue(state,action));
-		HashMap<String,Double> features = stateFeatures.getFeatures(action);
+		HashMap<String,Double> features = stateFeatures.getFeatures(state,action);
 		HashMap<String,Double> weights = stateFeatures.getWeights();
 		Iterator<String> featureIterator = features.keySet().iterator();
 		while(featureIterator.hasNext())
@@ -168,5 +186,6 @@ public class Player{
 	{
 		return Integer.toString(this.playerNumber);
 	}
+	
 	 
 }
