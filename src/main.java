@@ -23,7 +23,7 @@ public class main{
 	
 	public static void main (String[] args) {
 		int perPlayer = 52 / playerCount;
-		System.out.println("Weights before  training " +players[0].stateFeatures.getWeights());
+		System.out.println("Weights before  training check commit " +players[0].stateFeatures.getWeights());
 		u.trainPlayer();
 		System.out.println("Weights after  training " +players[0].stateFeatures.getWeights());
 		

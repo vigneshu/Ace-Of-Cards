@@ -97,7 +97,7 @@ public class Util extends JPanel  implements ActionListener{
 		
 		int perPlayer = 52 / playerCount;
 		
-		while(training<100000)
+		while(training<2)
 		{
 			Player[] players = new Player[playerCount];
 			Deck cards = new Deck();
