@@ -20,7 +20,6 @@ public class DrawingFrame extends JFrame  {
 		g.fillRect(0, 0, getWidth(), getHeight());
 		g.setColor(getForeground());
 		for (Integer i = 0;i< players.length;i++) {
-			
 			Player player = players[i];
 			List<Card> hand = player.state.hand;
 			int playerNumber = player.getPlayerNumber();
