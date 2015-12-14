@@ -12,23 +12,26 @@ public class Player{
 	private int playerNumber;
 	static private int playerCount;
 	public static Features  stateFeatures = new Features();
-	
+	Boolean bot;
+	public String playerName;
 
 	
-	Player(Player p) {
+	Player(Player p,Boolean bot) {
 		this.state = new State(p.state);
 		this.playerNumber = p.playerNumber;
 		this.discount = p.discount;
 		this.alpha = p.alpha;
 		Player.stateFeatures = new Features(stateFeatures);
+		this.bot = bot;
 		
 	}
 	
-	Player(int pno,int playerCount) {
+	Player(int pno,int playerCount,Boolean bot) {
 		this.state = new State();
 		this.state.playerNumber = pno;
 		this.playerNumber = pno;
 		Player.playerCount = playerCount;
+		this.bot = bot;
 		for(int i=0;i<playerCount;i++)
 		{
 			if(i != playerNumber)
@@ -37,6 +40,10 @@ public class Player{
 				this.state.otherPlayerEmptySuits.put(i, new ArrayList<Suit>());
 			}
 		}
+	}
+	public String getName()
+	{
+		return this.playerName;
 	}
 	public int getPlayerNumber()
 	{
@@ -113,6 +120,8 @@ public class Player{
 		Double sum = 0.0;
 		HashMap<String,Double> features = stateFeatures.getFeatures(state,action);
 		HashMap<String,Double> weights = stateFeatures.getWeights();
+		if(weights.isEmpty())
+			System.out.println("weights Erorrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr"+weights);
 		Iterator<String> featureIterator = features.keySet().iterator();
 		while(featureIterator.hasNext())
 		{
@@ -130,6 +139,7 @@ public class Player{
 		HashMap<Card,Double> actionAndValue = new HashMap<Card,Double>();
 		Card action = new Card();;
 		List<Card> legalCards = getLegalActions(s);
+		
 		if(legalCards.size() == 0) // Not required?
 		{
 			actionAndValue.put(new Card(Rank.NONE,Suit.NONE),0.0);
@@ -146,10 +156,32 @@ public class Player{
 		else
 		{
 			Iterator<Card> legalCardIterator = legalCards.iterator();
+			boolean temp = false;
+//			int nextPlayerNumber =  Util.getNextPlayerNumber(playerNumber,s.playerCount);
 			while(legalCardIterator.hasNext())
 			{
 				 Card actionCard = legalCardIterator.next();
 				Double qVal = getQValue(s,actionCard);
+				////Temp test
+
+				
+//				List<Suit> emptySuits = s.otherPlayerEmptySuits.get(nextPlayerNumber);
+//				 if(s.cardsOnBoard.size()==0 && !temp &&!training && !emptySuits.isEmpty() && emptySuits.contains(actionCard.getSuit()))
+//				 {
+//					System.out.println("qVal for emoty suit "+qVal+" "+s.cardPlayed.getSuit());
+//					System.out.println("legalCards "+legalCards);
+//					temp = true;
+//				 }
+//				 if(s.cardsOnBoard.size()==0)
+//				 {
+//					 System.out.println("actionCard "+actionCard);
+//					 System.out.println("actionCard qVal "+qVal);;
+//				 }
+//				 if(temp)
+//				 {
+
+//				 }
+				////Temp test
 				if(qVal>max)
 				{
 					max = qVal;

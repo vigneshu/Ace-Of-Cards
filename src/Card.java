@@ -18,6 +18,10 @@ public class Card {
 	public Suit getSuit() {
 		return this.suit;
 	}
+	
+	public Integer getSuitNumber() {
+		return this.suit.getNumber();
+	}
 
 	public void setRank(Rank r) {
 		this.rank = r;

@@ -22,24 +22,13 @@ public class DrawingFrame extends JFrame  {
 		for (Integer i = 0;i< players.length;i++) {
 			Player player = players[i];
 			List<Card> hand = player.state.hand;
-			int playerNumber = player.getPlayerNumber();
-			// The paint method shows the message at the bottom of the
-			// canvas, and it draws all of the dealt cards spread out
-			// across the canvas.
+			int playerNumber = player.getPlayerNumber(); 
+			
 			Font bigFont = new Font("Serif", Font.BOLD, 14);
 			Font smallFont = new Font("SansSerif", Font.PLAIN, 12);
 			g.setFont(bigFont);
 			g.setColor(Color.green);
 			g.drawString("Change this message", 10, getSize().height - 10);
-
-			// // Draw labels for the two sets of cards.
-			//
-			g.drawString("Dealer's Cards:", 10, 23);
-			g.drawString("Your Cards:", 10, 153);
-
-			// Draw dealer's cards. Draw first card face down if
-			// the game is still in progress, It will be revealed
-			// when the game ends.
 
 			g.setFont(smallFont);
 			Iterator handIt = hand.iterator();
